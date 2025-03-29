@@ -18,10 +18,86 @@ function distance(x1, y1, x2, y2) {
   var yDist = y2 - y1;
   return Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
 }
+
+/**
+ * Rotates coordinate system for velocities
+ *
+ * Takes velocities and alters them as if the coordinate system they're on was rotated
+ *
+ * @param  Object | velocity | The velocity of an individual particle
+ * @param  Float  | angle    | The angle of collision between two objects in radians
+ * @return Object | The altered x and y velocities after the coordinate system has been rotated
+ */
+
+function rotate(velocity, angle) {
+  var rotatedVelocities = {
+    x: velocity.x * Math.cos(angle) - velocity.y * Math.sin(angle),
+    y: velocity.x * Math.sin(angle) + velocity.y * Math.cos(angle)
+  };
+  return rotatedVelocities;
+}
+
+/**
+ * Swaps out two colliding particles' x and y velocities after running through
+ * an elastic collision reaction equation
+ *
+ * @param  Object | particle      | A particle object with x and y coordinates, plus velocity
+ * @param  Object | otherParticle | A particle object with x and y coordinates, plus velocity
+ * @return Null | Does not return a value
+ */
+
+function resolveCollision(particle, otherParticle) {
+  var xVelocityDiff = particle.dx - otherParticle.dx;
+  var yVelocityDiff = particle.dy - otherParticle.dy;
+  var xDist = otherParticle.x - particle.x;
+  var yDist = otherParticle.y - particle.y;
+
+  // Prevent accidental overlap of particles
+  if (xVelocityDiff * xDist + yVelocityDiff * yDist >= 0) {
+    // Grab angle between the two colliding particles
+    var angle = -Math.atan2(otherParticle.y - particle.y, otherParticle.x - particle.x);
+
+    // Store mass in var for better readability in collision equation
+    var m1 = particle.mass;
+    var m2 = otherParticle.mass;
+
+    // Velocity before equation
+    var u1 = rotate({
+      x: particle.dx,
+      y: particle.dy
+    }, angle);
+    var u2 = rotate({
+      x: otherParticle.dx,
+      y: otherParticle.dy
+    }, angle);
+
+    // Velocity after 1D collision equation
+    var v1 = {
+      x: u1.x * (m1 - m2) / (m1 + m2) + u2.x * 2 * m2 / (m1 + m2),
+      y: u1.y
+    };
+    var v2 = {
+      x: u2.x * (m1 - m2) / (m1 + m2) + u1.x * 2 * m2 / (m1 + m2),
+      y: u2.y
+    };
+
+    // Final velocity after rotating axis back to original location
+    var vFinal1 = rotate(v1, -angle);
+    var vFinal2 = rotate(v2, -angle);
+
+    // Swap particle velocities for realistic bounce effect
+    particle.dx = vFinal1.x;
+    particle.dy = vFinal1.y;
+    otherParticle.dx = vFinal2.x;
+    otherParticle.dy = vFinal2.y;
+  }
+}
 module.exports = {
   randomIntFromRange: randomIntFromRange,
   randomColor: randomColor,
-  distance: distance
+  distance: distance,
+  rotate: rotate,
+  resolveCollision: resolveCollision
 };
 
 /***/ })
@@ -108,58 +184,91 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var canvas = document.querySelector('canvas');
-var c = canvas.getContext('2d');
+var canvas = document.querySelector("canvas");
+var c = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
+var particles;
 var mouse = {
   x: innerWidth / 2,
   y: innerHeight / 2
 };
-var colors = ['#2185C5', '#7ECEFD', '#FFF6E5', '#FF7F66'];
+var colors = ["#F7374F", "#88304E", "#522546", "#2C2C2C"];
 
 // Event Listeners
-addEventListener('mousemove', function (event) {
+addEventListener("mousemove", function (event) {
   mouse.x = event.clientX;
   mouse.y = event.clientY;
 });
-addEventListener('resize', function () {
+addEventListener("resize", function () {
   canvas.width = innerWidth;
   canvas.height = innerHeight;
   init();
 });
 
 // Objects
-var _Object = /*#__PURE__*/function () {
-  function Object(x, y, radius, color) {
-    _classCallCheck(this, Object);
+var Particle = /*#__PURE__*/function () {
+  function Particle(x, y, radius, color) {
+    _classCallCheck(this, Particle);
     this.x = x;
     this.y = y;
     this.radius = radius;
     this.color = color;
+    this.mass = 2; //resolve collision needs mass
+    this.dx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(2, 6);
+    this.dy = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(2, 6);
   }
-  _createClass(Object, [{
+  _createClass(Particle, [{
     key: "draw",
     value: function draw() {
       c.beginPath();
       c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-      c.fillStyle = this.color;
-      c.fill();
+      c.strokeStyle = this.color;
+      c.stroke();
       c.closePath();
     }
   }, {
     key: "update",
-    value: function update() {
+    value: function update(particleArr) {
       this.draw();
+
+      //collision detection
+      for (var i = 0; i < particleArr.length; i++) {
+        //don't measure your own coordinates , only others. so if "this" (aka the object) is equal to "elm" (itself)
+        //since all of the radii are the same , we can take the radius from the object itself
+        if (this === particleArr[i]) continue; // "jumps over" one iteration in the loop.
+        if ((0,_utils__WEBPACK_IMPORTED_MODULE_0__.distance)(this.x, this.y, particleArr[i].x, particleArr[i].y) - this.radius * 2 < 0) {
+          (0,_utils__WEBPACK_IMPORTED_MODULE_0__.resolveCollision)(this, particleArr[i]);
+        }
+      }
+      if (this.x + this.radius >= innerWidth || this.x - this.radius <= 0) {
+        this.dx = -this.dx;
+      }
+      if (this.y + this.radius >= innerHeight || this.y - this.radius <= 0) {
+        this.dy = -this.dy;
+      }
+      this.x += this.dx;
+      this.y += this.dy;
     }
   }]);
-  return Object;
+  return Particle;
 }(); // Implementation
-var objects;
 function init() {
-  objects = [];
-  for (var i = 0; i < 400; i++) {
-    // objects.push()
+  particles = [];
+  for (var i = 0; i < 100; i++) {
+    var randomRadius = 30;
+    var x = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerWidth - randomRadius);
+    var y = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerHeight - randomRadius);
+    if (particles.length !== 0) {
+      for (var j = 0; j < particles.length; j++) {
+        if ((0,_utils__WEBPACK_IMPORTED_MODULE_0__.distance)(x, y, particles[j].x, particles[j].y) - randomRadius * 2 < 0) {
+          x = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerWidth - randomRadius);
+          y = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerHeight - randomRadius);
+          j = -1;
+        }
+      }
+    }
+    particles.push(new Particle(x, y, randomRadius, (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomColor)(colors)));
   }
 }
 
@@ -167,10 +276,9 @@ function init() {
 function animate() {
   requestAnimationFrame(animate);
   c.clearRect(0, 0, canvas.width, canvas.height);
-  c.fillText('HTML CANVAS BOILERPLATE', mouse.x, mouse.y);
-  // objects.forEach(object => {
-  //  object.update()
-  // })
+  particles.forEach(function (particle) {
+    particle.update(particles);
+  });
 }
 init();
 animate();
