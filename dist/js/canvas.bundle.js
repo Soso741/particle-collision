@@ -77,7 +77,7 @@ function resolveCollision(particle, otherParticle) {
       y: u1.y
     };
     var v2 = {
-      x: u2.x * (m1 - m2) / (m1 + m2) + u1.x * 2 * m2 / (m1 + m2),
+      x: u2.x * (m2 - m1) / (m1 + m2) + u1.x * 2 * m1 / (m1 + m2),
       y: u2.y
     };
 

@@ -63,7 +63,7 @@ function resolveCollision(particle, otherParticle) {
 
     // Velocity after 1D collision equation
     const v1 = { x: (u1.x * (m1 - m2)) / (m1 + m2) + (u2.x * 2 * m2) / (m1 + m2), y: u1.y };
-    const v2 = { x: (u2.x * (m1 - m2)) / (m1 + m2) + (u1.x * 2 * m2) / (m1 + m2), y: u2.y };
+    const v2 = { x: (u2.x * (m2 - m1)) / (m1 + m2) + (u1.x * 2 * m1) / (m1 + m2), y: u2.y };
 
     // Final velocity after rotating axis back to original location
     const vFinal1 = rotate(v1, -angle);
