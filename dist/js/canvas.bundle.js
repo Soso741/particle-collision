@@ -14,6 +14,7 @@ function randomColor(colors) {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 function distance(x1, y1, x2, y2) {
+  //calculates distance between 2 points on XY plane
   var xDist = x2 - x1;
   var yDist = y2 - y1;
   return Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
@@ -193,12 +194,13 @@ var mouse = {
   x: innerWidth / 2,
   y: innerHeight / 2
 };
-var colors = ["#F7374F", "#88304E", "#522546", "#2C2C2C"];
+var colors = ["#2185C5", "#7ECEFD", "#FF7F66"];
+var randomRadius = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(25, 25);
 
 // Event Listeners
-addEventListener("mousemove", function (event) {
-  mouse.x = event.clientX;
-  mouse.y = event.clientY;
+addEventListener("mousemove", function (e) {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
 });
 addEventListener("resize", function () {
   canvas.width = innerWidth;
@@ -215,14 +217,20 @@ var Particle = /*#__PURE__*/function () {
     this.radius = radius;
     this.color = color;
     this.mass = 2; //resolve collision needs mass
-    this.dx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(2, 6);
-    this.dy = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(2, 6);
+    this.opacity = 0;
+    this.dx = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(-4, 4);
+    this.dy = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(-4, 4);
   }
   _createClass(Particle, [{
     key: "draw",
     value: function draw() {
       c.beginPath();
       c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+      c.save();
+      c.globalAlpha = this.opacity;
+      c.fillStyle = this.color;
+      c.fill();
+      c.restore();
       c.strokeStyle = this.color;
       c.stroke();
       c.closePath();
@@ -234,8 +242,6 @@ var Particle = /*#__PURE__*/function () {
 
       //collision detection
       for (var i = 0; i < particleArr.length; i++) {
-        //don't measure your own coordinates , only others. so if "this" (aka the object) is equal to "elm" (itself)
-        //since all of the radii are the same , we can take the radius from the object itself
         if (this === particleArr[i]) continue; // "jumps over" one iteration in the loop.
         if ((0,_utils__WEBPACK_IMPORTED_MODULE_0__.distance)(this.x, this.y, particleArr[i].x, particleArr[i].y) - this.radius * 2 < 0) {
           (0,_utils__WEBPACK_IMPORTED_MODULE_0__.resolveCollision)(this, particleArr[i]);
@@ -247,6 +253,14 @@ var Particle = /*#__PURE__*/function () {
       if (this.y + this.radius >= innerHeight || this.y - this.radius <= 0) {
         this.dy = -this.dy;
       }
+
+      //mouse collision detection
+      if ((0,_utils__WEBPACK_IMPORTED_MODULE_0__.distance)(this.x, this.y, mouse.x, mouse.y) < 150 && this.opacity < 0.5) {
+        this.opacity += 0.02;
+      } else if (this.opacity > 0) {
+        this.opacity -= 0.02;
+        this.opacity = Math.max(0, this.opacity); //prevents opacity from going below 0
+      }
       this.x += this.dx;
       this.y += this.dy;
     }
@@ -255,8 +269,7 @@ var Particle = /*#__PURE__*/function () {
 }(); // Implementation
 function init() {
   particles = [];
-  for (var i = 0; i < 100; i++) {
-    var randomRadius = 30;
+  for (var i = 0; i < 170; i++) {
     var x = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerWidth - randomRadius);
     var y = (0,_utils__WEBPACK_IMPORTED_MODULE_0__.randomIntFromRange)(randomRadius, innerHeight - randomRadius);
     if (particles.length !== 0) {

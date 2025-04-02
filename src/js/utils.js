@@ -7,6 +7,7 @@ function randomColor(colors) {
 }
 
 function distance(x1, y1, x2, y2) {
+  //calculates distance between 2 points on XY plane
   const xDist = x2 - x1;
   const yDist = y2 - y1;
 

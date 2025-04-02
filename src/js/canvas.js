@@ -13,12 +13,14 @@ const mouse = {
   y: innerHeight / 2,
 };
 
-const colors = ["#F7374F", "#88304E", "#522546", "#2C2C2C"];
+const colors = ["#2185C5", "#7ECEFD", "#FF7F66"];
+
+const randomRadius = randomIntFromRange(25, 25);
 
 // Event Listeners
-addEventListener("mousemove", (event) => {
-  mouse.x = event.clientX;
-  mouse.y = event.clientY;
+addEventListener("mousemove", (e) => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
 });
 
 addEventListener("resize", () => {
@@ -36,13 +38,19 @@ class Particle {
     this.radius = radius;
     this.color = color;
     this.mass = 2; //resolve collision needs mass
-    this.dx = randomIntFromRange(2, 6);
-    this.dy = randomIntFromRange(2, 6);
+    this.opacity = 0;
+    this.dx = randomIntFromRange(-4, 4);
+    this.dy = randomIntFromRange(-4, 4);
   }
 
   draw() {
     c.beginPath();
     c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+    c.save();
+    c.globalAlpha = this.opacity;
+    c.fillStyle = this.color;
+    c.fill();
+    c.restore();
     c.strokeStyle = this.color;
     c.stroke();
     c.closePath();
@@ -53,8 +61,6 @@ class Particle {
 
     //collision detection
     for (let i = 0; i < particleArr.length; i++) {
-      //don't measure your own coordinates , only others. so if "this" (aka the object) is equal to "elm" (itself)
-      //since all of the radii are the same , we can take the radius from the object itself
       if (this === particleArr[i]) continue; // "jumps over" one iteration in the loop.
       if (distance(this.x, this.y, particleArr[i].x, particleArr[i].y) - this.radius * 2 < 0) {
         resolveCollision(this, particleArr[i]);
@@ -69,6 +75,15 @@ class Particle {
       this.dy = -this.dy;
     }
 
+    //mouse collision detection
+    if (distance(this.x, this.y, mouse.x, mouse.y) < 150 && this.opacity < 0.5) {
+      this.opacity += 0.02;
+    } else if (this.opacity > 0) {
+      this.opacity -= 0.02;
+
+      this.opacity = Math.max(0, this.opacity); //prevents opacity from going below 0
+    }
+
     this.x += this.dx;
     this.y += this.dy;
   }
@@ -78,8 +93,7 @@ class Particle {
 function init() {
   particles = [];
 
-  for (let i = 0; i < 100; i++) {
-    const randomRadius =30;
+  for (let i = 0; i < 170; i++) {
     let x = randomIntFromRange(randomRadius, innerWidth - randomRadius);
     let y = randomIntFromRange(randomRadius, innerHeight - randomRadius);
 
